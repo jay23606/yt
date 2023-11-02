@@ -2,6 +2,7 @@
 using YoutubeExplode.Videos.Streams;
 using NAudio.Wave;
 using NAudio.Lame;
+using System.Diagnostics;
 
 namespace yt
 {
@@ -15,25 +16,43 @@ namespace yt
                 return;
             }
 
+            string _artist = "";
             using (StreamReader reader = new StreamReader(args[0]))
             {
                 string line;
+                int idx = 1;
                 while ((line = reader.ReadLine()!) != null)
                 {
                     string[] parts = line.Split('\t');
                     if (parts.Length == 2)
                     {
                         string artist = parts[0];
+                        _artist = artist;
                         string song = parts[1];
                         Console.WriteLine($"Downloading Artist: {artist}, Song: {song}");
-                        await DownloadSong(song, artist);
-
+                        await DownloadSong(song, artist, idx);
+                        idx++;
                     }
                 }
             }
+            Console.WriteLine($"Burning CD for {_artist}. This may take a while!");
+            string command = @"C:\burn\cdbxpcmd";
+            string arguments = $@"--burn-audio -folder:""{Path.Combine(Directory.GetCurrentDirectory(), _artist)}""";
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = command;
+            startInfo.Arguments = arguments;
+            using (Process process = new Process())
+            {
+                process.StartInfo = startInfo;
+                process.Start();
+                process.WaitForExit();
+                int exitCode = process.ExitCode;
+                Console.WriteLine("Process exited with code: " + exitCode);
+            }
+
         }
 
-        public async static Task DownloadSong(string song, string artist)
+        public async static Task DownloadSong(string song, string artist, int index)
         {
             var videoId = GetYouTubeVideoId(song, artist);
             if (videoId == null || videoId.Length < 5)
@@ -51,7 +70,10 @@ namespace yt
             await youtube.Videos.Streams.DownloadAsync(audioStreamInfo, outputFilePath);
             using (var reader = new MediaFoundationReader(outputFilePath))
             {
-                var mp3OutputFilePath = Path.ChangeExtension(outputFilePath, "mp3");
+                var directoryPath = Path.GetDirectoryName(outputFilePath);
+                var fileName = $"{index.ToString().PadLeft(2, '0')}. " + Path.GetFileNameWithoutExtension(outputFilePath) + ".mp3"; 
+                var mp3OutputFilePath = Path.Combine(directoryPath!, fileName);
+
                 using (var outputFile = new LameMP3FileWriter(mp3OutputFilePath, reader.WaveFormat, LAMEPreset.STANDARD)) reader.CopyTo(outputFile);
             }
             File.Delete(outputFilePath);
