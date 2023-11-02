@@ -66,7 +66,9 @@ namespace yt
             var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
             var artistDirectory = Path.Combine(Environment.CurrentDirectory, artist);
             if (!Directory.Exists(artistDirectory)) Directory.CreateDirectory(artistDirectory);
-            var outputFilePath = Path.Combine(artistDirectory, $"{video.Title}.{audioStreamInfo.Container}");
+            //var outputFilePath = Path.Combine(artistDirectory, $"{video.Title}.{audioStreamInfo.Container}");
+            //var outputFilePath = Path.Combine(artistDirectory, $"{new string(video.Title.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '' : c).ToArray())}.{audioStreamInfo.Container}");
+            var outputFilePath = Path.Combine(artistDirectory, $"{new string(video.Title.Where(c => !Path.GetInvalidFileNameChars().Contains(c)).ToArray())}.{audioStreamInfo.Container}");
             await youtube.Videos.Streams.DownloadAsync(audioStreamInfo, outputFilePath);
             using (var reader = new MediaFoundationReader(outputFilePath))
             {
