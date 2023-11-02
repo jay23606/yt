@@ -1,13 +1,15 @@
-﻿NF	Hope
-NF	Motto
-NF	Careful (featuring Cordae)
-NF	Mama
-NF	Happy
-NF	Pandemonium
-NF	Suffice
-NF	Gone (featuring Julia Michaels)
-NF	Bullet
-NF	Turn My Back
-NF	Mistake
-NF	Let 'Em Pray
-NF	Running
+﻿BAD OMEN	"Concrete Jungle"
+BAD OMEN	"Nowhere to Go"
+BAD OMEN	"Take Me First"
+BAD OMEN	"The Death of Peace of Mind"
+BAD OMEN	"What It Cost"
+BAD OMEN	"Like a Villain"
+BAD OMEN	"Bad Decisions"
+BAD OMEN	"Just Pretend"
+BAD OMEN	"The Grey"
+BAD OMEN	"Who Are You?"
+BAD OMEN	"Somebody Else."
+BAD OMEN	"IDWT$"
+BAD OMEN	"What Do You Want from Me?"
+BAD OMEN	"Artificial Suicide"
+BAD OMEN	"Miracle"
