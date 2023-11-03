@@ -1,15 +1,15 @@
-﻿BAD OMEN	"Concrete Jungle"
-BAD OMEN	"Nowhere to Go"
-BAD OMEN	"Take Me First"
-BAD OMEN	"The Death of Peace of Mind"
-BAD OMEN	"What It Cost"
-BAD OMEN	"Like a Villain"
-BAD OMEN	"Bad Decisions"
-BAD OMEN	"Just Pretend"
-BAD OMEN	"The Grey"
-BAD OMEN	"Who Are You?"
-BAD OMEN	"Somebody Else."
-BAD OMEN	"IDWT$"
-BAD OMEN	"What Do You Want from Me?"
-BAD OMEN	"Artificial Suicide"
-BAD OMEN	"Miracle"
+﻿DEFTONES	Diamond Eyes
+DEFTONES	Royal
+DEFTONES	CMND/CTRL
+DEFTONES	You've Seen the Butcher
+DEFTONES	Beauty School
+DEFTONES	Prince
+DEFTONES	Rocket Skates
+DEFTONES	Sextape
+DEFTONES	Risk
+DEFTONES	976-EVIL
+DEFTONES	This Place Is Death
+DEFTONES	Rocket Skates (M83 Remix)
+DEFTONES	Do You Believe (The Cardigans cover)
+DEFTONES	Ghosts (Japan cover)
+DEFTONES	Caress (Drive Like Jehu cover)
