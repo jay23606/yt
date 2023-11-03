@@ -15,3 +15,5 @@ https://cdburnerxp.se/help/Intro/cdburnerxp
 https://visualstudio.microsoft.com/vs/community/
 
 ![Screenshot](ss.png)
+
+The artist name should be simplified as much as possible because it looks for the name in the video title or description and only downloads the song if it appears there
