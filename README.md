@@ -7,3 +7,5 @@ pretty simple just update input.txt with album you'd like to burn
 and put cdbxpcmd.exe under C:\burn
 
 https://cdburnerxp.se/help/Intro/cdburnerxp
+
+![Screenshot](ss.png)
