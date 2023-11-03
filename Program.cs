@@ -35,12 +35,11 @@ namespace yt
                     }
                 }
             }
+
             Console.WriteLine($"Burning CD for {_artist}. This may take a while!");
-            string command = @"C:\burn\cdbxpcmd";
-            string arguments = $@"--burn-audio -folder:""{Path.Combine(Directory.GetCurrentDirectory(), _artist)}""";
             ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.FileName = command;
-            startInfo.Arguments = arguments;
+            startInfo.FileName = @"C:\burn\cdbxpcmd";
+            startInfo.Arguments = $@"--burn-audio -folder:""{Path.Combine(Directory.GetCurrentDirectory(), _artist)}""";
             using (Process process = new Process())
             {
                 process.StartInfo = startInfo;
@@ -50,6 +49,12 @@ namespace yt
                 Console.WriteLine("Process exited with code: " + exitCode);
             }
 
+        }
+
+        public static bool IsArtistFound(YoutubeExplode.Videos.Video? video, string artist)
+        {
+            if (video == null) return false;
+            return video.Title.ToString().ToLower().Contains(artist.ToLower()) || video.Description.ToLower().Contains(artist.ToLower());
         }
 
         public async static Task DownloadSong(string song, string artist, int index)
@@ -62,30 +67,53 @@ namespace yt
             }
             var youtube = new YoutubeClient();
             var video = await youtube.Videos.GetAsync(videoId);
+
+            //Check that we have the right artist, sometimes it hallucinates and gives us the wrong artist
+            //but it could be happening further down the line
+            bool isArtistFound = video.Title.ToString().ToLower().Contains(artist.ToLower()) || video.Description.ToLower().Contains(artist.ToLower());
+            if (!IsArtistFound(video, artist))
+            {
+                Console.WriteLine($"Could not find video for {song} by {artist}");
+                int retryCount = 0;
+                while (retryCount < 3)
+                {
+                    await Task.Delay(10000);
+                    videoId = GetYouTubeVideoId(artist, song);
+                    if (videoId == null || videoId.Length < 5)
+                    {
+                        Console.WriteLine($"Could not find video for {song} by {artist}");
+                        return;
+                    }
+                    video = await youtube.Videos.GetAsync(videoId);
+                    if (IsArtistFound(video, artist)) break;
+                    retryCount++;
+                }
+                if (retryCount >= 3)
+                {
+                    Console.WriteLine($"Could not download song {song} by {artist} even after retrying {retryCount} times");
+                    return;
+                }
+            }
+
             var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoId);
             var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
             var artistDirectory = Path.Combine(Environment.CurrentDirectory, artist);
             if (!Directory.Exists(artistDirectory)) Directory.CreateDirectory(artistDirectory);
-            //var outputFilePath = Path.Combine(artistDirectory, $"{video.Title}.{audioStreamInfo.Container}");
-            //var outputFilePath = Path.Combine(artistDirectory, $"{new string(video.Title.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '' : c).ToArray())}.{audioStreamInfo.Container}");
             var outputFilePath = Path.Combine(artistDirectory, $"{new string(video.Title.Where(c => !Path.GetInvalidFileNameChars().Contains(c)).ToArray())}.{audioStreamInfo.Container}");
             await youtube.Videos.Streams.DownloadAsync(audioStreamInfo, outputFilePath);
+            var directoryPath = Path.GetDirectoryName(outputFilePath);
+            var fileName = $"{index.ToString().PadLeft(2, '0')}. " + Path.GetFileNameWithoutExtension(outputFilePath) + ".mp3";
+            var mp3OutputFilePath = Path.Combine(directoryPath!, fileName);
             using (var reader = new MediaFoundationReader(outputFilePath))
-            {
-                var directoryPath = Path.GetDirectoryName(outputFilePath);
-                var fileName = $"{index.ToString().PadLeft(2, '0')}. " + Path.GetFileNameWithoutExtension(outputFilePath) + ".mp3"; 
-                var mp3OutputFilePath = Path.Combine(directoryPath!, fileName);
-
                 using (var outputFile = new LameMP3FileWriter(mp3OutputFilePath, reader.WaveFormat, LAMEPreset.STANDARD)) reader.CopyTo(outputFile);
-            }
+            
             File.Delete(outputFilePath);
         }
 
 
         static string GetYouTubeVideoId(string songTitle, string artistName)
         {
-            string searchQuery = $"{songTitle} {artistName} official video";
-
+            string searchQuery = $"{artistName} {songTitle}";
             using (var client = new HttpClient())
             {
                 var searchUrl = $"https://www.youtube.com/results?search_query={Uri.EscapeDataString(searchQuery)}";
