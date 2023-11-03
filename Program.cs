@@ -4,7 +4,7 @@ using YoutubeExplode.Videos.Streams;
 using NAudio.Wave;
 using NAudio.Lame;
 using System.Diagnostics;
-using HtmlAgilityPack;
+//using HtmlAgilityPack;
 using System.Text.RegularExpressions;
 
 namespace yt
@@ -15,7 +15,7 @@ namespace yt
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Provide a txt file with format like ARTIST <TAB> SONG NAME and the MP3s will be downloaded from YouTube (optional 2nd argument for destination folder name)");
+                Console.WriteLine("yt \"album name\" \"artist name\"");
                 return;
             }
             string _artist = "";
@@ -33,7 +33,7 @@ namespace yt
                         _artist = artist;
                         string song_ = parts[1];
                         Console.WriteLine($"Downloading Artist: {artist}, Song: {song_}");
-                        await DownloadSong(song, artist, idx);
+                        await DownloadSong(song, artist, idx, args[0]);
                         idx++;
                     }
                 }
@@ -62,6 +62,7 @@ namespace yt
 
             //allows you to specify the artist name for the folder it gets put into
             if (args.Length>1) _artist = args[1];
+            if (!args[0].ToLower().EndsWith(".txt")) _artist = Path.Combine(_artist, args[0]);
 
             Console.WriteLine($"Burning CD for {_artist}. This may take a while!");
             ProcessStartInfo startInfo = new ProcessStartInfo();
@@ -84,7 +85,7 @@ namespace yt
             return video.Title.ToString().ToLower().Contains(artist.ToLower()) || video.Description.ToLower().Contains(artist.ToLower());
         }
 
-        public async static Task DownloadSong(string song, string artist, int index)
+        public async static Task DownloadSong(string song, string artist, int index, string album = "")
         {
             var videoId = GetYouTubeVideoId(song, artist);
             if (videoId == null || videoId.Length < 5)
@@ -124,6 +125,9 @@ namespace yt
             var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoId);
             var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
             var artistDirectory = Path.Combine(Environment.CurrentDirectory, artist);
+
+            if (album.Length > 0) artistDirectory = Path.Combine(artistDirectory, album);
+
             if (!Directory.Exists(artistDirectory)) Directory.CreateDirectory(artistDirectory);
             var outputFilePath = Path.Combine(artistDirectory, $"{new string(video.Title.Where(c => !Path.GetInvalidFileNameChars().Contains(c)).ToArray())}.{audioStreamInfo.Container}");
             await youtube.Videos.Streams.DownloadAsync(audioStreamInfo, outputFilePath);
@@ -177,29 +181,11 @@ namespace yt
                 string albumUrl = basePath + href;
                 response = client.GetAsync(albumUrl).Result;
                 var albumUrlResponse = response.Content.ReadAsStringAsync().Result;
-
-                // Find id="track1" through id="track99" and extract innerText from the next TD element
-                //for (int i = 1; i <= 99; i++)
-                //{
-                //    string trackId = "track" + i;
-                //    string pattern = $"id=\"{trackId}\".*?<td.*?>(.*?)</td>";
-
-                //    var match = Regex.Match(albumUrlResponse, pattern, RegexOptions.Singleline);
-                //    if (match.Success)
-                //    {
-                //        string innerText = match.Groups[1].Value;
-                //        innerText = Regex.Replace(innerText, "<.*?>", string.Empty);
-                //        var arr = innerText.Replace("\"", "").Split("\n");
-                //        foreach (var line in arr) artistSong.Add(string.Join("\t", artist, line));
-                //    }
-                //    else break;
-                //}
                 int lastIndex = 0;
                 string remainingInput = albumUrlResponse;
                 for (; ; ) 
                 {
                     string trackId = "track";
-                    //string pattern = $"id=\"{trackId}\".*?<td.*?>(.*?)</td>";
                     string pattern = $"id=\"{trackId}\\d*\".*?<td.*?>(.*?)</td>";
 
                     var match = Regex.Match(remainingInput, pattern, RegexOptions.Singleline);
