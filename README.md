@@ -8,4 +8,6 @@ and put cdbxpcmd.exe under C:\burn
 
 https://cdburnerxp.se/help/Intro/cdburnerxp
 
+https://visualstudio.microsoft.com/vs/community/
+
 ![Screenshot](ss.png)
