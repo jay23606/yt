@@ -1,4 +1,5 @@
 ﻿using YoutubeExplode;
+using YoutubeExplode.Videos;
 using YoutubeExplode.Videos.Streams;
 using NAudio.Wave;
 using NAudio.Lame;
@@ -12,7 +13,7 @@ namespace yt
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Provide a txt file with format like ARTIST <TAB> SONG NAME and the MP3s will be downloaded from YouTube");
+                Console.WriteLine("Provide a txt file with format like ARTIST <TAB> SONG NAME and the MP3s will be downloaded from YouTube (optional 2nd argument for destination folder name)");
                 return;
             }
 
@@ -36,6 +37,9 @@ namespace yt
                 }
             }
 
+            //allows you to specify the artist name for the folder it gets put into
+            if (args.Length>1) _artist = args[1];
+
             Console.WriteLine($"Burning CD for {_artist}. This may take a while!");
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.FileName = @"C:\burn\cdbxpcmd";
@@ -51,7 +55,7 @@ namespace yt
 
         }
 
-        public static bool IsArtistFound(YoutubeExplode.Videos.Video? video, string artist)
+        public static bool IsArtistFound(Video? video, string artist)
         {
             if (video == null) return false;
             return video.Title.ToString().ToLower().Contains(artist.ToLower()) || video.Description.ToLower().Contains(artist.ToLower());
@@ -101,7 +105,8 @@ namespace yt
             var outputFilePath = Path.Combine(artistDirectory, $"{new string(video.Title.Where(c => !Path.GetInvalidFileNameChars().Contains(c)).ToArray())}.{audioStreamInfo.Container}");
             await youtube.Videos.Streams.DownloadAsync(audioStreamInfo, outputFilePath);
             var directoryPath = Path.GetDirectoryName(outputFilePath);
-            var fileName = $"{index.ToString().PadLeft(2, '0')}. " + Path.GetFileNameWithoutExtension(outputFilePath) + ".mp3";
+            int leftPad = (index < 100) ? 2 : ((index < 1000) ? 3 : ((index < 10000) ? 4 : 5));
+            var fileName = $"{index.ToString().PadLeft(leftPad, '0')}. " + Path.GetFileNameWithoutExtension(outputFilePath) + ".mp3";
             var mp3OutputFilePath = Path.Combine(directoryPath!, fileName);
             using (var reader = new MediaFoundationReader(outputFilePath))
                 using (var outputFile = new LameMP3FileWriter(mp3OutputFilePath, reader.WaveFormat, LAMEPreset.STANDARD)) reader.CopyTo(outputFile);
