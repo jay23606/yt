@@ -4,6 +4,8 @@ using YoutubeExplode.Videos.Streams;
 using NAudio.Wave;
 using NAudio.Lame;
 using System.Diagnostics;
+using HtmlAgilityPack;
+using System.Text.RegularExpressions;
 
 namespace yt
 {
@@ -16,23 +18,44 @@ namespace yt
                 Console.WriteLine("Provide a txt file with format like ARTIST <TAB> SONG NAME and the MP3s will be downloaded from YouTube (optional 2nd argument for destination folder name)");
                 return;
             }
-
             string _artist = "";
-            using (StreamReader reader = new StreamReader(args[0]))
+            //search wiki for the song names if not provided a text file
+            if (!args[0].ToLower().EndsWith(".txt") && args.Length > 1)
             {
-                string line;
+                var songs = FindSongs(args[0], args[1]);
                 int idx = 1;
-                while ((line = reader.ReadLine()!) != null)
+                foreach (var song in songs)
                 {
-                    string[] parts = line.Split('\t');
+                    string[] parts = song.Split('\t');
                     if (parts.Length == 2)
                     {
                         string artist = parts[0];
                         _artist = artist;
-                        string song = parts[1];
-                        Console.WriteLine($"Downloading Artist: {artist}, Song: {song}");
+                        string song_ = parts[1];
+                        Console.WriteLine($"Downloading Artist: {artist}, Song: {song_}");
                         await DownloadSong(song, artist, idx);
                         idx++;
+                    }
+                }
+            }
+            else
+            {
+                using (StreamReader reader = new StreamReader(args[0]))
+                {
+                    string line;
+                    int idx = 1;
+                    while ((line = reader.ReadLine()!) != null)
+                    {
+                        string[] parts = line.Split('\t');
+                        if (parts.Length == 2)
+                        {
+                            string artist = parts[0];
+                            _artist = artist;
+                            string song = parts[1];
+                            Console.WriteLine($"Downloading Artist: {artist}, Song: {song}");
+                            await DownloadSong(song, artist, idx);
+                            idx++;
+                        }
                     }
                 }
             }
@@ -134,6 +157,69 @@ namespace yt
             int endIndex = json.IndexOf("\"", startIndex);
             var videoId = json.Substring(startIndex, endIndex - startIndex);
             return videoId;
+        }
+
+        static HashSet<string> FindSongs(string album, string artist)
+        {
+            HashSet<string> artistSong = new();
+            using (var client = new HttpClient())
+            {
+                string basePath = "https://en.wikipedia.org/";
+                string searchUrl = $"{basePath}/w/index.php?search={Uri.EscapeDataString(album + " " + artist)}&title=Special%3ASearch&ns0=1";
+                var response = client.GetAsync(searchUrl).Result;
+                var wikiSearchResponse = response.Content.ReadAsStringAsync().Result;
+                //search for class="mw-search-result-heading" and extract the href from the first anchor tag
+                var classTag = "class=\"mw-search-result-heading\"><a href=\"";
+                int startIndex = wikiSearchResponse.IndexOf(classTag) + classTag.Length;
+                int endIndex = wikiSearchResponse.IndexOf("\"", startIndex);
+                var href = wikiSearchResponse.Substring(startIndex, endIndex - startIndex);
+
+                string albumUrl = basePath + href;
+                response = client.GetAsync(albumUrl).Result;
+                var albumUrlResponse = response.Content.ReadAsStringAsync().Result;
+
+                // Find id="track1" through id="track99" and extract innerText from the next TD element
+                //for (int i = 1; i <= 99; i++)
+                //{
+                //    string trackId = "track" + i;
+                //    string pattern = $"id=\"{trackId}\".*?<td.*?>(.*?)</td>";
+
+                //    var match = Regex.Match(albumUrlResponse, pattern, RegexOptions.Singleline);
+                //    if (match.Success)
+                //    {
+                //        string innerText = match.Groups[1].Value;
+                //        innerText = Regex.Replace(innerText, "<.*?>", string.Empty);
+                //        var arr = innerText.Replace("\"", "").Split("\n");
+                //        foreach (var line in arr) artistSong.Add(string.Join("\t", artist, line));
+                //    }
+                //    else break;
+                //}
+                int lastIndex = 0;
+                string remainingInput = albumUrlResponse;
+                for (; ; ) 
+                {
+                    string trackId = "track";
+                    //string pattern = $"id=\"{trackId}\".*?<td.*?>(.*?)</td>";
+                    string pattern = $"id=\"{trackId}\\d*\".*?<td.*?>(.*?)</td>";
+
+                    var match = Regex.Match(remainingInput, pattern, RegexOptions.Singleline);
+                    if (match.Success) 
+                    {
+                        lastIndex = match.Index + match.Length; 
+                        string innerText = match.Groups[1].Value;
+                        innerText = Regex.Replace(innerText, "<.*?>", string.Empty);
+                        var arr = innerText.Replace("\"", "").Split("\n");
+                        foreach (var line in arr)
+                        {
+                            var artistLine = string.Join("\t", artist, line);
+                            if (!artistSong.Contains(artistLine)) artistSong.Add(artistLine);
+                        }
+                    }
+                    else break;
+                    remainingInput = remainingInput.Substring(lastIndex);
+                }
+            }
+            return artistSong;
         }
     }
 }

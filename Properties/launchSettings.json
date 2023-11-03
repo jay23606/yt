@@ -2,7 +2,7 @@
   "profiles": {
     "yt": {
       "commandName": "Project",
-      "commandLineArgs": "input.txt"
+      "commandLineArgs": "\"Are You Experienced\" \"Jimi Hendrix\""
     }
   }
 }
