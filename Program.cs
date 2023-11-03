@@ -64,18 +64,41 @@ namespace yt
             if (args.Length>1) _artist = args[1];
             if (!args[0].ToLower().EndsWith(".txt")) _artist = Path.Combine(_artist, args[0]);
 
-            Console.WriteLine($"Burning CD for {_artist}. This may take a while!");
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.FileName = @"C:\burn\cdbxpcmd";
-            startInfo.Arguments = $@"--burn-audio -folder:""{Path.Combine(Directory.GetCurrentDirectory(), _artist)}""";
-            using (Process process = new Process())
+            //lets make sure we don't exceed 80 minutes
+            var burnPath = Path.Combine(Directory.GetCurrentDirectory(), _artist);
+            string[] mp3Files = Directory.GetFiles(burnPath, "*.mp3");
+            double currentDurationMinutes = 0, maxDurationMinutes = 80;
+            int songCount = 0;
+            foreach (string file in mp3Files)
             {
-                process.StartInfo = startInfo;
-                process.Start();
-                process.WaitForExit();
-                int exitCode = process.ExitCode;
-                Console.WriteLine("Process exited with code: " + exitCode);
+                using (var audioFile = new AudioFileReader(file))
+                {
+                    currentDurationMinutes += audioFile.TotalTime.TotalMinutes;
+                    if (currentDurationMinutes > maxDurationMinutes) break;
+                    songCount++;
+                }
             }
+            
+            int exitCode = 0;
+            do
+            {
+                mp3Files = mp3Files.Take(songCount).ToArray();
+                Console.WriteLine($"Burning CD for {_artist}. This may take a while!");
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.FileName = @"C:\burn\cdbxpcmd";
+                //startInfo.Arguments = $@"--burn-audio -folder:""{burnPath}""";
+                startInfo.WorkingDirectory = Path.GetDirectoryName(mp3Files[0]);
+                startInfo.Arguments = $@"--burn-audio {string.Join(" ", mp3Files.Select(f => $@"-file:""{Path.GetFileName(f)}"""))}";
+                using (Process process = new Process())
+                {
+                    process.StartInfo = startInfo;
+                    process.Start();
+                    process.WaitForExit();
+                    exitCode = process.ExitCode;
+                    Console.WriteLine("Process exited with code: " + exitCode);
+                }
+                songCount--; //keep trying if we can't fit all the songs on the CD
+            } while (exitCode == 649);
 
         }
 
@@ -90,8 +113,13 @@ namespace yt
             var videoId = GetYouTubeVideoId(song, artist);
             if (videoId == null || videoId.Length < 5)
             {
-                Console.WriteLine($"Could not find video for {song} by {artist}");
-                return;
+                await Task.Delay(5000);
+                videoId = GetYouTubeVideoId(artist, song);
+                if (videoId == null || videoId.Length < 5)
+                {
+                    Console.WriteLine($"Could not find video for {song} by {artist}");
+                    return;
+                }
             }
             var youtube = new YoutubeClient();
             var video = await youtube.Videos.GetAsync(videoId);
@@ -104,7 +132,7 @@ namespace yt
                 int retryCount = 0;
                 while (retryCount < 3)
                 {
-                    await Task.Delay(10000);
+                    await Task.Delay(5000);
                     videoId = GetYouTubeVideoId(artist, song);
                     if (videoId == null || videoId.Length < 5)
                     {
