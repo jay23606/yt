@@ -70,7 +70,6 @@ namespace yt
 
             //Check that we have the right artist, sometimes it hallucinates and gives us the wrong artist
             //but it could be happening further down the line
-            bool isArtistFound = video.Title.ToString().ToLower().Contains(artist.ToLower()) || video.Description.ToLower().Contains(artist.ToLower());
             if (!IsArtistFound(video, artist))
             {
                 Console.WriteLine($"Could not find video for {song} by {artist}");
